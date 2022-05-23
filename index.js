@@ -61,6 +61,13 @@ async function run() {
             res.send({ result: result, message: "Successful Order" });
         });
 
+        // My Booking Orders
+        app.get("/my-orders/:email", async (req, res) => {
+            const email = req.params.email;
+            const filter = { email: email };
+            const result = await orderCollection.find(filter).toArray();
+            res.send(result);
+        });
         // Add Product
         app.get("/get-product", async (req, res) => {
             const result = await productCollection.find({}).toArray();
