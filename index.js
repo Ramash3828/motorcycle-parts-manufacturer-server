@@ -25,13 +25,15 @@ async function run() {
         const userCollection = client
             .db("parts-manufacturer")
             .collection("users");
+        const orderCollection = client
+            .db("parts-manufacturer")
+            .collection("orders");
         // User create and update in database
-        app.put("/user/:email", async (req, res) => {
+        app.put("/add-user/:email", async (req, res) => {
             const email = req.params.email;
             const user = req.body;
             const filter = { email: email };
             const options = { upsert: true };
-            console.log(email);
             const updateDoc = {
                 $set: user,
             };
@@ -51,6 +53,14 @@ async function run() {
             const result = await productCollection.insertOne(product);
             res.send(result);
         });
+        // Order
+        app.post("/add-order", async (req, res) => {
+            const order = req.body;
+            const result = await orderCollection.insertOne(order);
+            res.send({ result: result, message: "Successful Order" });
+        });
+
+        // Add Product
         app.get("/add-product", async (req, res) => {
             const result = await productCollection.find({}).toArray();
             res.send(result);
