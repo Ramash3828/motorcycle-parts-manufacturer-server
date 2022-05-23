@@ -53,6 +53,7 @@ async function run() {
             const result = await productCollection.insertOne(product);
             res.send(result);
         });
+
         // Order
         app.post("/add-order", async (req, res) => {
             const order = req.body;
@@ -61,7 +62,7 @@ async function run() {
         });
 
         // Add Product
-        app.get("/add-product", async (req, res) => {
+        app.get("/get-product", async (req, res) => {
             const result = await productCollection.find({}).toArray();
             res.send(result);
         });
