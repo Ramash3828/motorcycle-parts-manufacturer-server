@@ -65,12 +65,17 @@ async function run() {
         app.get("/my-orders/:email", async (req, res) => {
             const email = req.params.email;
             const filter = { email: email };
-            const result = await orderCollection.find(filter).toArray();
+            const result = await (
+                await orderCollection.find(filter).toArray()
+            ).reverse();
+
             res.send(result);
         });
         // Get All orders
         app.get("/all-orders", async (req, res) => {
-            const result = await orderCollection.find({}).toArray();
+            const result = await (
+                await orderCollection.find({}).toArray()
+            ).reverse();
             res.send(result);
         });
         // Delete order
@@ -84,7 +89,9 @@ async function run() {
         });
         // Add Product
         app.get("/get-product", async (req, res) => {
-            const result = await productCollection.find({}).toArray();
+            const result = await (
+                await productCollection.find({}).limit(6).toArray()
+            ).reverse();
             res.send(result);
         });
     } finally {
