@@ -99,10 +99,10 @@ async function run() {
             res.send(result);
         });
         // Review Add
-        app.put("/add-review/:email", async (req, res) => {
+        app.put("/add-review/:id", async (req, res) => {
             const review = req.body;
-            const { email } = req.params;
-            const filter = { email: email };
+            const { id } = req.params;
+            const filter = { _id: ObjectId(id) };
             const options = { upsert: true };
             const updateDoc = {
                 $set: review,
@@ -113,6 +113,12 @@ async function run() {
                 options
             );
             res.send({ review: result, message: "Sent Review successfully" });
+        });
+
+        // Get Review Count
+        app.get("/add-review/count", async (req, res) => {
+            const result = await reviewCollection.findOne();
+            res.send(result);
         });
     } finally {
     }
