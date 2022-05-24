@@ -28,6 +28,10 @@ async function run() {
         const orderCollection = client
             .db("parts-manufacturer")
             .collection("orders");
+        const reviewCollection = client
+            .db("parts-manufacturer")
+            .collection("reviews");
+
         // User create and update in database
         app.put("/add-user/:email", async (req, res) => {
             const email = req.params.email;
@@ -93,6 +97,22 @@ async function run() {
                 await productCollection.find({}).limit(6).toArray()
             ).reverse();
             res.send(result);
+        });
+        // Review Add
+        app.put("/add-review/:email", async (req, res) => {
+            const review = req.body;
+            const { email } = req.params;
+            const filter = { email: email };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: review,
+            };
+            const result = await reviewCollection.updateOne(
+                filter,
+                updateDoc,
+                options
+            );
+            res.send({ review: result, message: "Sent Review successfully" });
         });
     } finally {
     }
