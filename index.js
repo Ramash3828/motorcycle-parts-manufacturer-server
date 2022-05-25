@@ -6,6 +6,8 @@ require("dotenv").config();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 //Middleware
 app.use(express.json());
 app.use(cors());
@@ -34,8 +36,8 @@ async function run() {
 
         // User create and update in database
         app.put("/add-user/:email", async (req, res) => {
-            const email = req.params.email;
-            const user = req.body;
+            const email = req?.params.email;
+            const user = req?.body;
             const filter = { email: email };
             const options = { upsert: true };
             const updateDoc = {
@@ -116,9 +118,28 @@ async function run() {
         });
 
         // Get Review Count
-        app.get("/add-review/count", async (req, res) => {
-            const result = await reviewCollection.findOne();
+        app.get("/add-review/", async (req, res) => {
+            const result = await (
+                await reviewCollection.find({}).toArray()
+            ).reverse();
             res.send(result);
+        });
+
+        // Payment gateway
+        app.post("/create-payment-intent", async (req, res) => {
+            const { price } = req.body;
+            const amount = price * 100;
+
+            // Create a PaymentIntent with the order amount and currency
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_methods_types: ["card"],
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
         });
     } finally {
     }
