@@ -18,6 +18,23 @@ const client = new MongoClient(uri, {
     useUnifiedTopology: true,
     serverApi: ServerApiVersion.v1,
 });
+
+// Verify Access Token
+const verifyToken = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: "Unauthorize access" });
+    }
+    const token = authHeader.split(" ")[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+        if (err) {
+            return res.status(403).send({ message: "Forbidden access" });
+        }
+        req.decoded = decoded;
+        next();
+    });
+};
+
 async function run() {
     try {
         await client.connect();
@@ -33,6 +50,28 @@ async function run() {
         const reviewCollection = client
             .db("parts-manufacturer")
             .collection("reviews");
+
+        // Make Admin and update database
+        app.put("/user/admin/:email", verifyToken, async (req, res) => {
+            const email = req.params.email;
+            const requseter = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({
+                email: requseter,
+            });
+            if (requesterAccount.role === "admin") {
+                const filter = { email: email };
+                const updateDoc = {
+                    $set: { role: "admin" },
+                };
+                const result = await userCollection.updateOne(
+                    filter,
+                    updateDoc
+                );
+                res.send(result);
+            } else {
+                res.status(403).send({ message: "Forbidden access" });
+            }
+        });
 
         // User create and update in database
         app.put("/add-user/:email", async (req, res) => {
@@ -53,14 +92,36 @@ async function run() {
             });
             res.send({ result, token });
         });
+
+        // Get all user
+        app.get("/users", async (req, res) => {
+            const cursor = userCollection.find({});
+            const users = await cursor.toArray();
+            res.send(users);
+        });
         // Add Products
         app.post("/add-product", async (req, res) => {
             const product = req.body;
             const result = await productCollection.insertOne(product);
             res.send(result);
         });
+        app.put("/update-product/:id", async (req, res) => {
+            const product = req.body;
+            const { id } = req.params;
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
 
-        // Order
+            const updateDoc = {
+                $set: product,
+            };
+            const result = await productCollection.updateOne(
+                filter,
+                updateDoc,
+                options
+            );
+            res.send({ review: result, message: "Update data successfully" });
+        });
+        // Order Insert
         app.post("/add-order", async (req, res) => {
             const order = req.body;
             const result = await orderCollection.insertOne(order);
@@ -118,11 +179,12 @@ async function run() {
         });
 
         // Get Review Count
-        app.get("/add-review/", async (req, res) => {
-            const result = await (
+        app.get("/review/", async (req, res) => {
+            const review = await (
                 await reviewCollection.find({}).toArray()
             ).reverse();
-            res.send(result);
+
+            res.send(review);
         });
 
         // Payment gateway
