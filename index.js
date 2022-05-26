@@ -22,6 +22,7 @@ const client = new MongoClient(uri, {
 // Verify Access Token
 const verifyToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
+
     if (!authHeader) {
         return res.status(401).send({ message: "Unauthorize access" });
     }
@@ -55,6 +56,7 @@ async function run() {
         app.put("/user/admin/:email", verifyToken, async (req, res) => {
             const email = req.params.email;
             const requseter = req.decoded.email;
+
             const requesterAccount = await userCollection.findOne({
                 email: requseter,
             });
@@ -119,7 +121,7 @@ async function run() {
                 updateDoc,
                 options
             );
-            res.send({ review: result, message: "Update data successfully" });
+            res.send({ result: result, message: "Update data successfully" });
         });
         // Order Insert
         app.post("/add-order", async (req, res) => {
@@ -178,7 +180,7 @@ async function run() {
             res.send({ review: result, message: "Sent Review successfully" });
         });
 
-        // Get Review Count
+        // Get Review
         app.get("/review/", async (req, res) => {
             const review = await (
                 await reviewCollection.find({}).toArray()
