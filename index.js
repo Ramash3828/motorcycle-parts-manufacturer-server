@@ -156,6 +156,7 @@ async function run() {
                 message: "Order cancel Successfully! ",
             });
         });
+
         // Add Product
         app.get("/get-product", async (req, res) => {
             const result = await (
@@ -163,6 +164,17 @@ async function run() {
             ).reverse();
             res.send(result);
         });
+
+        // Delete a Product
+        app.delete("/product-delete/:id", async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await productCollection.deleteOne(filter);
+            res.send({
+                message: "Order cancel Successfully! ",
+            });
+        });
+
         // Review Add
         app.put("/add-review/:id", async (req, res) => {
             const review = req.body;
