@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const cors = require("cors");
+const nodemailer = require("nodemailer");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const port = process.env.PORT || 5000;
@@ -11,7 +12,58 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 //Middleware
 app.use(express.json());
 app.use(cors());
+//Send Email
 
+function sendBookingEmail(product) {
+    var transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+            user: process.env.EMAIL_SENDER,
+            pass: process.env.EMAIL_PASS_KEY,
+        },
+    });
+
+    var mailOptions = {
+        from: process.env.EMAIL_SENDER,
+        to: `${product?.email}`,
+        subject: `Your Booking for ${product.name} and amount <strong>$${product.grandTotal}</strong> is confirmed`,
+        text: `Your Booking for ${product.name} and amount <strong>$${product.grandTotal}</strong> is confirmed`,
+        html: `
+           <div>
+                <div>
+                    <p>
+                        Hello ${product.userName}
+                    </p>
+                    <p>
+                        Address : ${product.address}
+                    </p>
+                    <p>
+                        Phone : ${product.phone}
+                    </p>
+                    <p >
+                        Please Pay for :${product.name} product.
+                    </p>
+                    <p>
+                        Your order quantity is ${product?.order} and price per product $${product.price} <strong>Total amount: </strong> $${product.grandTotal}
+                    </p>
+                    <p>
+                        Please pay your amount: $${product?.grandTotal}
+                    </p>
+                </div>
+            </div>
+            `,
+    };
+
+    transporter.sendMail(mailOptions, function (error, info) {
+        if (error) {
+            console.log(error);
+        } else {
+            console.log("Email sent: " + info?.response);
+        }
+    });
+}
+
+// end send email
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.uqxor.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
     useNewUrlParser: true,
@@ -125,6 +177,7 @@ async function run() {
         app.post("/add-order", async (req, res) => {
             const order = req.body;
             const result = await orderCollection.insertOne(order);
+            sendBookingEmail(order);
             res.send({ result: result, message: "Successful Order" });
         });
 
