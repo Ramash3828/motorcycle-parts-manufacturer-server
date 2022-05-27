@@ -89,9 +89,7 @@ async function run() {
                 updateDoc,
                 options
             );
-            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
-                expiresIn: "1h",
-            });
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN);
             res.send({ result, token });
         });
 
