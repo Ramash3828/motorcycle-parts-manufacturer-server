@@ -165,6 +165,23 @@ async function run() {
             res.send(result);
         });
 
+        // Update Product
+        app.put("/update-product/:id", async (req, res) => {
+            const product = req.body;
+            const { id } = req.params;
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: product,
+            };
+            const result = await reviewCollection.updateOne(
+                filter,
+                updateDoc,
+                options
+            );
+            res.send({ review: result, message: "Sent Product successfully" });
+        });
+
         // Delete a Product
         app.delete("/product-delete/:id", async (req, res) => {
             const id = req.params.id;
@@ -207,7 +224,7 @@ async function run() {
             const amount = price * 100;
 
             // Create a PaymentIntent with the order amount and currency
-            const paymentIntent = await stripe?.paymentIntents.create({
+            const paymentIntent = await stripe.paymentIntents.create({
                 amount: amount,
                 currency: "usd",
                 payment_methods_types: ["card"],
