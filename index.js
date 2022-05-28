@@ -26,8 +26,8 @@ function sendBookingEmail(product) {
     var mailOptions = {
         from: process.env.EMAIL_SENDER,
         to: `${product?.email}`,
-        subject: `Your Booking for ${product.name} and amount <strong>$${product.grandTotal}</strong> is confirmed`,
-        text: `Your Booking for ${product.name} and amount <strong>$${product.grandTotal}</strong> is confirmed`,
+        subject: `Your Booking for ${product.name} and amount $${product.grandTotal} is confirmed`,
+        text: `Your Booking for ${product.name} and amount $${product.grandTotal} is confirmed`,
         html: `
            <div>
                 <div>
