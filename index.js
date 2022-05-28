@@ -7,7 +7,9 @@ require("dotenv").config();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")(
+    "sk_test_51L3ESPBIdT4KTE6Fnzj9Zj6tx1wCT1nW50GcHaIKsjOTSZ83SapmEZ5oxUmBcjnmY6vgFd9FJaE0JK3rdBgNX8TA00CSs3m78b"
+);
 
 //Middleware
 app.use(express.json());
@@ -103,31 +105,52 @@ async function run() {
         const reviewCollection = client
             .db("parts-manufacturer")
             .collection("reviews");
+        const paymentCollection = client
+            .db("parts-manufacturer")
+            .collection("payments");
 
-        // Make Admin and update database
-        app.put("/user/admin/:email", verifyToken, async (req, res) => {
-            const email = req.params.email;
-            const requseter = req.decoded.email;
-
+        // Admin Verify
+        const verifyAdmin = async (req, res, next) => {
+            const requester = req.decoded.email;
             const requesterAccount = await userCollection.findOne({
-                email: requseter,
+                email: requester,
             });
             if (requesterAccount.role === "admin") {
-                const filter = { email: email };
-                const updateDoc = {
-                    $set: { role: "admin" },
-                };
-                const result = await userCollection.updateOne(
-                    filter,
-                    updateDoc
-                );
-                res.send(result);
+                next();
             } else {
-                res.status(403).send({ message: "Forbidden access" });
+                res.status(403).send({ message: "forbidden" });
             }
-        });
+        };
 
-        // User create and update in database
+        // Make Admin and update database
+        app.put(
+            "/user/admin/:email",
+            verifyToken,
+            verifyAdmin,
+            async (req, res) => {
+                const email = req.params.email;
+                const requseter = req.decoded.email;
+
+                const requesterAccount = await userCollection.findOne({
+                    email: requseter,
+                });
+                if (requesterAccount.role === "admin") {
+                    const filter = { email: email };
+                    const updateDoc = {
+                        $set: { role: "admin" },
+                    };
+                    const result = await userCollection.updateOne(
+                        filter,
+                        updateDoc
+                    );
+                    res.send(result);
+                } else {
+                    res.status(403).send({ message: "Forbidden access" });
+                }
+            }
+        );
+
+        // User create and update in database do not verify
         app.put("/add-user/:email", async (req, res) => {
             const email = req?.params.email;
             const user = req?.body;
@@ -141,48 +164,62 @@ async function run() {
                 updateDoc,
                 options
             );
-            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN);
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, {
+                expiresIn: "1d",
+            });
             res.send({ result, token });
         });
 
         // Get all user
-        app.get("/users", async (req, res) => {
+        app.get("/users", verifyToken, async (req, res) => {
             const cursor = userCollection.find({});
             const users = await cursor.toArray();
             res.send(users);
         });
         // Add Products
-        app.post("/add-product", async (req, res) => {
+        app.post("/add-product", verifyToken, verifyAdmin, async (req, res) => {
             const product = req.body;
             const result = await productCollection.insertOne(product);
             res.send(result);
         });
-        app.put("/update-product/:id", async (req, res) => {
-            const product = req.body;
-            const { id } = req.params;
-            const filter = { _id: ObjectId(id) };
-            const options = { upsert: true };
+        app.put(
+            "/update-product/:id",
+            verifyToken,
+            verifyAdmin,
+            async (req, res) => {
+                const product = req.body;
+                const { id } = req.params;
+                const filter = { _id: ObjectId(id) };
+                const options = { upsert: true };
 
-            const updateDoc = {
-                $set: product,
-            };
-            const result = await productCollection.updateOne(
-                filter,
-                updateDoc,
-                options
-            );
-            res.send({ result: result, message: "Update data successfully" });
-        });
+                const updateDoc = {
+                    $set: product,
+                };
+                const result = await productCollection.updateOne(
+                    filter,
+                    updateDoc,
+                    options
+                );
+                res.send({
+                    result: result,
+                    message: "Update data successfully",
+                });
+            }
+        );
         // Order Insert
-        app.post("/add-order", async (req, res) => {
+        app.post("/add-order", verifyToken, async (req, res) => {
             const order = req.body;
+
             const result = await orderCollection.insertOne(order);
             sendBookingEmail(order);
-            res.send({ result: result, message: "Successful Order" });
+            return res.send({
+                result: result,
+                message: "Successful Order",
+            });
         });
 
         // My Booking Orders
-        app.get("/my-orders/:email", async (req, res) => {
+        app.get("/my-orders/:email", verifyToken, async (req, res) => {
             const email = req.params.email;
             const filter = { email: email };
             const result = await (
@@ -192,7 +229,7 @@ async function run() {
             res.send(result);
         });
         // Get All orders
-        app.get("/all-orders", async (req, res) => {
+        app.get("/all-orders", verifyToken, async (req, res) => {
             const result = await (
                 await orderCollection.find({}).toArray()
             ).reverse();
@@ -217,7 +254,7 @@ async function run() {
         });
 
         // Update Product
-        app.put("/update-product/:id", async (req, res) => {
+        app.put("/update-product/:id", verifyToken, async (req, res) => {
             const product = req.body;
             const { id } = req.params;
             const filter = { _id: ObjectId(id) };
@@ -234,7 +271,7 @@ async function run() {
         });
 
         // Delete a Product
-        app.delete("/product-delete/:id", async (req, res) => {
+        app.delete("/product-delete/:id", verifyToken, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const result = await productCollection.deleteOne(filter);
@@ -244,7 +281,7 @@ async function run() {
         });
 
         // Review Add
-        app.put("/add-review/:id", async (req, res) => {
+        app.put("/add-review/:id", verifyToken, async (req, res) => {
             const review = req.body;
             const { id } = req.params;
             const filter = { _id: ObjectId(id) };
@@ -284,6 +321,25 @@ async function run() {
             res.send({
                 clientSecret: paymentIntent.client_secret,
             });
+        });
+
+        app.patch("/booking/:id", verifyToken, async (req, res) => {
+            const id = req.params.id;
+            const payment = req.body;
+            const filter = { _id: ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId,
+                },
+            };
+
+            const result = await paymentCollection.insertOne(payment);
+            // const updatedBooking = await orderCollection.updateOne(
+            //     filter,
+            //     updatedDoc
+            // );
+            res.send(updatedBooking);
         });
     } finally {
     }
